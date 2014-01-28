@@ -462,12 +462,14 @@ static void update_sit_entry(struct f2fs_sb_info *sbi, block_t blkaddr, int del)
 		get_sec_entry(sbi, segno)->valid_blocks += del;
 }
 
-static void refresh_sit_entry(struct f2fs_sb_info *sbi,
-			block_t old_blkaddr, block_t new_blkaddr)
+void refresh_sit_entry(struct f2fs_sb_info *sbi, block_t old, block_t new)
 {
-	update_sit_entry(sbi, new_blkaddr, 1);
-	if (GET_SEGNO(sbi, old_blkaddr) != NULL_SEGNO)
-		update_sit_entry(sbi, old_blkaddr, -1);
+	update_sit_entry(sbi, new, 1);
+	if (GET_SEGNO(sbi, old) != NULL_SEGNO)
+		update_sit_entry(sbi, old, -1);
+
+	locate_dirty_segment(sbi, GET_SEGNO(sbi, old));
+	locate_dirty_segment(sbi, GET_SEGNO(sbi, new));
 }
 
 void invalidate_blocks(struct f2fs_sb_info *sbi, block_t addr)
@@ -1069,17 +1071,15 @@ static void do_write_page(struct f2fs_sb_info *sbi, struct page *page,
 
 	stat_inc_block_count(sbi, curseg);
 
+	if (!__has_curseg_space(sbi, type))
+		sit_i->s_ops->allocate_segment(sbi, type, false);
 	/*
 	 * SIT information should be updated before segment allocation,
 	 * since SSR needs latest valid block information.
 	 */
 	refresh_sit_entry(sbi, old_blkaddr, *new_blkaddr);
-
-	if (!__has_curseg_space(sbi, type))
-		sit_i->s_ops->allocate_segment(sbi, type, false);
-
 	locate_dirty_segment(sbi, old_cursegno);
-	locate_dirty_segment(sbi, GET_SEGNO(sbi, old_blkaddr));
+
 	mutex_unlock(&sit_i->sentry_lock);
 
 	if (p_type == NODE)
@@ -1165,9 +1165,7 @@ void recover_data_page(struct f2fs_sb_info *sbi,
 	__add_sum_entry(sbi, type, sum);
 
 	refresh_sit_entry(sbi, old_blkaddr, new_blkaddr);
-
 	locate_dirty_segment(sbi, old_cursegno);
-	locate_dirty_segment(sbi, GET_SEGNO(sbi, old_blkaddr));
 
 	mutex_unlock(&sit_i->sentry_lock);
 	mutex_unlock(&curseg->curseg_mutex);
@@ -1214,9 +1212,7 @@ void rewrite_node_page(struct f2fs_sb_info *sbi,
 	submit_write_page(sbi, page, new_blkaddr, NODE);
 	f2fs_submit_bio(sbi, NODE, true);
 	refresh_sit_entry(sbi, old_blkaddr, new_blkaddr);
-
 	locate_dirty_segment(sbi, old_cursegno);
-	locate_dirty_segment(sbi, GET_SEGNO(sbi, old_blkaddr));
 
 	mutex_unlock(&sit_i->sentry_lock);
 	mutex_unlock(&curseg->curseg_mutex);
