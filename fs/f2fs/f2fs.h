@@ -1022,8 +1022,7 @@ static inline unsigned int addrs_per_inode(struct f2fs_inode_info *fi)
 
 static inline void *inline_xattr_addr(struct page *page)
 {
-	struct f2fs_inode *ri;
-	ri = (struct f2fs_inode *)page_address(page);
+	struct f2fs_inode *ri = F2FS_INODE(page);
 	return (void *)&(ri->i_addr[DEF_ADDRS_PER_INODE -
 					F2FS_INLINE_XATTR_ADDRS]);
 }
@@ -1038,8 +1037,7 @@ static inline int inline_xattr_size(struct inode *inode)
 
 static inline void *inline_data_addr(struct page *page)
 {
-	struct f2fs_inode *ri;
-	ri = (struct f2fs_inode *)page_address(page);
+	struct f2fs_inode *ri = F2FS_INODE(page);
 	return (void *)&(ri->i_addr[1]);
 }
 
