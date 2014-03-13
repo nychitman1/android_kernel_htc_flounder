@@ -585,17 +585,6 @@ static int f2fs_show_options(struct seq_file *seq, struct dentry *root)
 	if (test_opt(sbi, DISABLE_EXT_IDENTIFY))
 		seq_puts(seq, ",disable_ext_identify");
 
-	if (test_opt(sbi, ANDROID_EMU))
-		seq_printf(seq, ",android_emu=%u:%u:%ho%s",
-				sbi->android_emu_uid,
-				sbi->android_emu_gid,
-				sbi->android_emu_mode,
-				(sbi->android_emu_flags &
-					F2FS_ANDROID_EMU_NOCASE) ?
-						":nocase" : "");
-
-	seq_printf(seq, ",active_logs=%u", sbi->active_logs);
-
 	return 0;
 }
 
