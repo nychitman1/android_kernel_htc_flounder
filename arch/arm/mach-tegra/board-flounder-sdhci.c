@@ -448,6 +448,7 @@ struct cntry_locales_custom country_code_nodfs_table[] = {
 	{"QA", "QA", 0},
 	{"RO", "E0", 26},
 	{"RS", "E0", 26},
+	{"SA", "SA", 26},
 	{"SE", "E0", 26},
 	{"SG", "SG", 17},
 	{"SI", "E0", 26},
