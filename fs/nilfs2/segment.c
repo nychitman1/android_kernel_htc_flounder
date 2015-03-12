@@ -1901,6 +1901,8 @@ static void nilfs_segctor_drop_written_files(struct nilfs_sc_info *sci,
 {
 	struct nilfs_transaction_info *ti = current->journal_info;
 	struct nilfs_inode_info *ii, *n;
+	int during_mount = !(sci->sc_super->s_flags & MS_ACTIVE);
+	int defer_iput = false;
 
 	spin_lock(&nilfs->ns_inode_lock);
 	list_for_each_entry_safe(ii, n, &sci->sc_dirty_files, i_dirty) {
@@ -1911,7 +1913,19 @@ static void nilfs_segctor_drop_written_files(struct nilfs_sc_info *sci,
 		clear_bit(NILFS_I_BUSY, &ii->i_state);
 		brelse(ii->i_bh);
 		ii->i_bh = NULL;
-		list_move_tail(&ii->i_dirty, &ti->ti_garbage);
+		list_del_init(&ii->i_dirty);
+		if (!ii->vfs_inode.i_nlink || during_mount) {
+			/*
+			 * Defer calling iput() to avoid deadlocks if
+			 * i_nlink == 0 or mount is not yet finished.
+			 */
+			list_add_tail(&ii->i_dirty, &sci->sc_iput_queue);
+			defer_iput = true;
+		} else {
+			spin_unlock(&nilfs->ns_inode_lock);
+			iput(&ii->vfs_inode);
+			spin_lock(&nilfs->ns_inode_lock);
+		}
 	}
 	spin_unlock(&nilfs->ns_inode_lock);
 }
